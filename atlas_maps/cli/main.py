@@ -29,14 +29,19 @@ def main():
     client = MapsClient()
 
     try:
-        html = client.fetch_page(url)
-        state = extract_initialization_state(html)
-        if not state:
-            print("No structured state detected in payload.")
-            sys.exit(0)
+        # Restriction-proof dual resolution: try wire extraction; fallback to headless Chrome
+        places = []
+        try:
+            html = client.fetch_page(url)
+            state = extract_initialization_state(html)
+            if state:
+                places = parse_place_entries(state)
+        except Exception:
+            pass
 
-        places = parse_place_entries(state)
-        
+        if not places:
+            places = client.fetch_places_headless(url)
+
         if args.json:
             print(json.dumps([p.model_dump() for p in places], indent=2))
         else:
